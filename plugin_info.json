@@ -1,0 +1,21 @@
+{
+  "name": "ComfyUI Multi-Function Plugin",
+  "version": "1.0.0",
+  "description": "这是一个自用的comfyui节点包。找不到可用的就自己写。",
+  "author": "WYQilin",
+  "nodes": [
+    {
+      "class": "MultiImageMerger",
+      "display_name": "多图合并",
+      "category": "WYQilin/image",
+      "description": "将多张图片合并成一张图片，支持横向/竖向拼接"
+    },
+    {
+      "class": "JSONExtractor",
+      "display_name": "JSON提取器",
+      "category": "WYQilin/json",
+      "description": "从JSON文本中提取指定key的值，支持多层级访问"
+    }
+  ],
+  "requirements": ["torch", "PIL", "numpy"]
+}
