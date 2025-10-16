@@ -397,14 +397,85 @@ class ImageToSVG:
         svg_data = sketch2svg(img, preserve_color)
         return (svg_data,)
 
+class ImageDuplicator:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "copy_count": ("INT", {"default": 1, "min": 1, "max": 100, "step": 1}),
+            }
+        }
+    
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "duplicate_image"
+    CATEGORY = "WYQilin/image"
+    
+    def duplicate_image(self, image, copy_count):
+        # 检查输入是否为有效的图像张量
+        if not isinstance(image, torch.Tensor):
+            raise TypeError("输入必须是图像张量")
+        
+        # 确保图像是4D张量 [batch_size, height, width, channels]
+        if image.dim() == 3:
+            image = image.unsqueeze(0)  # 添加batch维度
+        elif image.dim() != 4:
+            raise ValueError(f"不支持的图像维度: {image.dim()}")
+        
+        # 复制图像
+        result_images = []
+        for _ in range(copy_count):
+            result_images.append(image.clone())
+        
+        # 将列表中的图像沿着batch维度连接
+        result = torch.cat(result_images, dim=0)
+        
+        return (result,)
+
+class StringLineBreaker:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "text": ("STRING", {"multiline": True, "default": ""}),
+                "max_chars": ("INT", {"default": 50, "min": 1, "max": 1000, "step": 1}),
+            }
+        }
+    
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "add_line_breaks"
+    CATEGORY = "WYQilin/text"
+    
+    def add_line_breaks(self, text, max_chars):
+        if not text:
+            return ("",)
+        
+        result = []
+        current_line = ""
+        
+        for char in text:
+            current_line += char
+            if len(current_line) >= max_chars:
+                result.append(current_line)
+                current_line = ""
+        
+        if current_line:
+            result.append(current_line)
+        
+        return ("\n".join(result),)
+
 NODE_CLASS_MAPPINGS = {
     "MultiImageMerger": MultiImageMerger,
     "JSONExtractor": JSONExtractor,
     "ImageToSVG": ImageToSVG,
+    "StringLineBreaker": StringLineBreaker,
+    "ImageDuplicator": ImageDuplicator,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "MultiImageMerger": "多图合并",
     "JSONExtractor": "JSON提取器",
     "ImageToSVG": "图片转SVG",
+    "StringLineBreaker": "字符串换行",
+    "ImageDuplicator": "图片复制",
 }
