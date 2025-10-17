@@ -5,10 +5,21 @@ import json
 import io
 import subprocess
 import sys
+import os
 from svgpathtools import parse_path,Path
 from xml.etree import ElementTree as ET
 import cv2
 import svgwrite
+
+# 导入视频处理工具
+from .video_utils import VideoMerger, get_available_transitions, get_supported_video_extensions
+
+# 设备检测
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# 辅助函数
+
+# 这些函数已经移到video_utils.py中
 
 if sys.platform == "win32":
     executable_path = "potrace.exe" # Windows平台上的potrace可执行文件
@@ -464,18 +475,68 @@ class StringLineBreaker:
         
         return ("\n".join(result),)
 
-NODE_CLASS_MAPPINGS = {
-    "MultiImageMerger": MultiImageMerger,
-    "JSONExtractor": JSONExtractor,
-    "ImageToSVG": ImageToSVG,
-    "StringLineBreaker": StringLineBreaker,
-    "ImageDuplicator": ImageDuplicator,
-}
+class VideoMergerWithTransitions:
+    """视频合并转场节点"""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": { 
+                "video_paths": ("STRING", {"multiline": True, "default":"video1.mp4\nvideo2.mp4", "tooltip": "视频文件路径列表，每行一个路径（List of video file paths, one path per line）"}),
+                "reference_video_index": ("INT", {"default":0, "min":0, "step":1, "tooltip": "参考视频的索引（从0开始），决定输出视频的尺寸（Index of reference video (starting from 0), determines the size of output video）"}),
+                "target_fps": ("FLOAT", {"default":30.0, "min":1.0, "max":60.0, "step":1.0, "display":"number", "tooltip": "目标帧率，所有视频将转换为该帧率并保持总时长不变（Target frame rate, all videos will be converted to this frame rate while maintaining total duration）"}),
+                "device": (["cpu","cuda"], {"default":device,}),
+                "transition": (get_available_transitions(),{"default": "fade", "tooltip": "转场效果类型（Transition effect type）"}),
+                "transition_duration": ("FLOAT",{"default":1,"min":0.1,"max":3.0,"step":0.1,"display":"number","tooltip": "转场持续时间，单位秒，最大值为3秒（Transition duration in seconds, maximum 3 seconds）"}),
+                "output_path": ("STRING", {"default":"merged_videos", "tooltip": "相对于ComfyUI的output目录的输出路径（Output path relative to ComfyUI's output directory）"}),
+            },
+        }
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "MultiImageMerger": "多图合并",
-    "JSONExtractor": "JSON提取器",
-    "ImageToSVG": "图片转SVG",
-    "StringLineBreaker": "字符串换行",
-    "ImageDuplicator": "图片复制",
-}
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("merged_video_path",)
+    FUNCTION = "merge_videos"
+    OUTPUT_NODE = True
+    CATEGORY = "WYQilin/video"
+  
+    def merge_videos(self, video_paths, reference_video_index, target_fps, device, transition, transition_duration, output_path):
+        """合并视频并添加转场效果
+        
+        Args:
+            video_paths: 视频文件路径列表（多行字符串）
+            reference_video_index: 参考视频索引
+            target_fps: 目标帧率
+            device: 处理设备（cpu或cuda）
+            transition: 转场效果类型
+            transition_duration: 转场持续时间（秒）
+            output_path: 相对于ComfyUI的output目录的输出路径
+            
+        Returns:
+            str: 合并后的视频路径
+        """
+        try:
+            # 处理视频路径列表
+            paths = [path.strip() for path in video_paths.strip().split('\n') if path.strip()]
+            
+            # 创建VideoMerger实例
+            merger = VideoMerger()
+            
+            # 获取ComfyUI的output目录（假设当前目录是自定义节点目录，parent的parent是ComfyUI根目录）
+            comfyui_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            output_full_path = os.path.join(comfyui_root, "output", output_path.strip())
+            
+            # 调用合并功能
+            merged_video_path = merger.merge_videos_with_transitions(
+                video_paths=paths,
+                reference_video_index=reference_video_index,
+                target_fps=target_fps,
+                transition_type=transition,
+                transition_duration=transition_duration,
+                output_path=output_full_path,
+                device=device
+            )
+            
+            return (merged_video_path,)
+            
+        except Exception as e:
+            print(f"视频合并出现问题：{str(e)}")
+            raise ValueError(f"视频合并失败：{str(e)}")
