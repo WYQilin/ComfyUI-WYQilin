@@ -14,6 +14,13 @@ import svgwrite
 # 导入视频处理工具
 from .video_utils import VideoMerger, get_available_transitions, get_supported_video_extensions
 
+# 尝试导入ComfyUI的folder_paths模块（更可靠的输出目录获取方式）
+try:
+    import folder_paths
+except ImportError:
+    # 如果无法导入folder_paths（可能在ComfyUI外部运行），使用备用方法
+    folder_paths = None
+
 # 设备检测
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -520,9 +527,19 @@ class VideoMergerWithTransitions:
             # 创建VideoMerger实例
             merger = VideoMerger()
             
-            # 获取ComfyUI的output目录（假设当前目录是自定义节点目录，parent的parent是ComfyUI根目录）
-            comfyui_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            output_full_path = os.path.join(comfyui_root, "output", output_path.strip())
+            # 使用ComfyUI的folder_paths模块获取输出目录（更可靠的方法）
+            if folder_paths is not None:
+                output_dir = folder_paths.get_output_directory()
+            else:
+                # 备用方法：如果无法使用folder_paths，回退到相对路径
+                comfyui_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                output_dir = os.path.join(comfyui_root, "output")
+                
+            # 构建完整的输出路径
+            output_full_path = os.path.join(output_dir, output_path.strip())
+            
+            # 确保输出目录存在
+            os.makedirs(output_full_path, exist_ok=True)
             
             # 调用合并功能
             merged_video_path = merger.merge_videos_with_transitions(
