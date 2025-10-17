@@ -540,3 +540,23 @@ class VideoMergerWithTransitions:
         except Exception as e:
             print(f"视频合并出现问题：{str(e)}")
             raise ValueError(f"视频合并失败：{str(e)}")
+
+# 节点类映射 - 这是ComfyUI加载节点所必需的
+NODE_CLASS_MAPPINGS = { 
+     "MultiImageMerger": MultiImageMerger, 
+     "JSONExtractor": JSONExtractor, 
+     "ImageToSVG": ImageToSVG, 
+     "StringLineBreaker": StringLineBreaker, 
+     "ImageDuplicator": ImageDuplicator, 
+     "VideoMergerWithTransitions": VideoMergerWithTransitions
+ }
+ 
+# 节点显示名称映射 - 定义在UI中显示的名称
+NODE_DISPLAY_NAME_MAPPINGS = { 
+     "MultiImageMerger": "多图合并", 
+     "JSONExtractor": "JSON提取器", 
+     "ImageToSVG": "图片转SVG", 
+     "StringLineBreaker": "字符串换行", 
+     "ImageDuplicator": "图片复制", 
+     "VideoMergerWithTransitions": "视频合并转场"
+ }
