@@ -192,10 +192,12 @@ class VideoMerger:
         else:
             command.extend(['-an'])
         
-        # 添加视频编码器和其他参数
-        command.extend(['-c:v', 'libx264', '-preset', 'fast', '-crf', '23'])
-        command.extend(['-pix_fmt', 'yuv420p'])
-        command.extend(['-movflags', '+faststart'])
+        # 添加视频编码器和其他参数 - 增强兼容性
+        command.extend(['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'])
+        command.extend(['-pix_fmt', 'yuv420p'])  # 确保使用广泛兼容的像素格式
+        command.extend(['-movflags', '+faststart'])  # 允许视频在下载完成前开始播放
+        command.extend(['-profile:v', 'high'])  # 使用更兼容的编码配置文件
+        command.extend(['-color_range', 'tv', '-colorspace', 'bt709'])  # 标准色彩设置
         command.append(temp_path)
         
         # 执行命令
@@ -241,9 +243,11 @@ class VideoMerger:
         else:
             command.extend(['-an'])
         
-        # 添加视频编码器和其他参数
-        command.extend(['-c:v', 'libx264', '-preset', 'fast', '-crf', '23'])
-        command.extend(['-pix_fmt', 'yuv420p'])
+        # 添加视频编码器和其他参数 - 增强兼容性
+        command.extend(['-c:v', 'libx264', '-preset', 'medium', '-crf', '23'])
+        command.extend(['-pix_fmt', 'yuv420p'])  # 确保使用广泛兼容的像素格式
+        command.extend(['-profile:v', 'high'])  # 使用更兼容的编码配置文件
+        command.extend(['-color_range', 'tv', '-colorspace', 'bt709'])  # 标准色彩设置
         command.append(temp_path)
         
         # 执行命令
@@ -408,14 +412,22 @@ class VideoMerger:
                 # 如果没有音频，禁用音频轨道
                 command.extend(['-an'])
             
-            # 添加视频编码器参数
+            # 添加视频编码器参数 - 增强跨平台兼容性
             if device == "cuda":
                 command.extend(['-c:v', 'h264_nvenc'])
+                # NVENC特定优化参数
+                command.extend(['-profile:v', 'high'])
             else:
                 command.extend(['-c:v', 'libx264'])
+                # 使用更兼容的编码配置文件
+                command.extend(['-profile:v', 'high'])
             
-            # 添加输出质量和性能参数
+            # 添加输出质量、性能参数和增强兼容性的设置
             command.extend(['-preset', 'medium', '-crf', '23'])
+            command.extend(['-pix_fmt', 'yuv420p'])  # 确保使用广泛兼容的像素格式
+            command.extend(['-movflags', '+faststart'])  # 允许视频在下载完成前开始播放
+            command.extend(['-color_range', 'tv'])  # 设置标准色彩范围
+            command.extend(['-colorspace', 'bt709'])  # 设置标准色彩空间
             
             # 检查output_path是否包含文件名
             if os.path.splitext(output_path)[1]:
