@@ -1,3 +1,4 @@
+# 恢复原始相对导入，这在ComfyUI环境中能更好地工作
 from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']

@@ -259,6 +259,34 @@ class VideoMerger:
         
         return temp_path
     
+    def check_hardware_support(self, device):
+        """检查硬件编码支持
+        
+        Args:
+            device: 请求的设备类型（cpu或cuda）
+            
+        Returns:
+            tuple: (实际使用的设备类型, 视频编码器)
+        """
+        if device == "cuda":
+            try:
+                # 检查系统是否支持CUDA
+                cuda_check_cmd = ['ffmpeg', '-hwaccels']
+                result = subprocess.run(cuda_check_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if 'cuda' in result.stdout.lower():
+                    # 检查是否支持h264_nvenc编码器
+                    enc_check_cmd = ['ffmpeg', '-encoders']
+                    result = subprocess.run(enc_check_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    if 'h264_nvenc' in result.stdout:
+                        print("检测到CUDA支持和h264_nvenc编码器，使用硬件加速")
+                        return "cuda", "h264_nvenc"
+            except Exception:
+                pass
+            print("未检测到CUDA支持或h264_nvenc编码器，自动降级到CPU编码")
+        
+        # 默认使用CPU和libx264
+        return "cpu", "libx264"
+    
     def merge_videos_with_transitions(self, video_paths, reference_video_index, target_fps, transition_type, transition_duration, output_path, device="cpu"):
         """合并视频并添加转场
         
@@ -388,11 +416,14 @@ class VideoMerger:
             # 合并所有滤镜
             full_filter_complex = ";".join(filter_complex)
             
+            # 检查硬件编码支持并获取实际使用的设备类型和编码器
+            actual_device, video_encoder = self.check_hardware_support(device)
+            
             # 构建FFmpeg命令
             command = ['ffmpeg', '-y']  # 添加-y参数自动覆盖输出文件
             
             # 设置硬件加速
-            if device == "cuda":
+            if actual_device == "cuda":
                 command.extend(['-hwaccel', 'cuda'])
             
             # 添加所有输入文件
@@ -413,14 +444,9 @@ class VideoMerger:
                 command.extend(['-an'])
             
             # 添加视频编码器参数 - 增强跨平台兼容性
-            if device == "cuda":
-                command.extend(['-c:v', 'h264_nvenc'])
-                # NVENC特定优化参数
-                command.extend(['-profile:v', 'high'])
-            else:
-                command.extend(['-c:v', 'libx264'])
-                # 使用更兼容的编码配置文件
-                command.extend(['-profile:v', 'high'])
+            command.extend(['-c:v', video_encoder])
+            # 使用更兼容的编码配置文件
+            command.extend(['-profile:v', 'high'])
             
             # 添加输出质量、性能参数和增强兼容性的设置
             command.extend(['-preset', 'medium', '-crf', '23'])
